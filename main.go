@@ -29,7 +29,7 @@ func main() {
 	}))
 
 	// Koneksi ke DB MySQL
-	dsn := "root@tcp(127.0.0.1:3306)/order_bonus_api?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root@tcp(127.0.0.1:3306)/bonus_db?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Gagal koneksi ke database: ", err)
@@ -43,6 +43,7 @@ func main() {
 		&models.Evaluation{},
 		&models.KPIEvaluation{},
 		&models.KpiCategory{},
+		&models.Kondite{},
 	)
 
 	// Seed data admin setelah migrasi
@@ -76,6 +77,11 @@ func main() {
 		api.POST("/employees", controllers.CreateEmployee)
 		api.PUT("/employees/:id", controllers.UpdateEmployee)
 		api.DELETE("/employees/:id", controllers.DeleteEmployee)
+		// Kondite
+		api.GET("/kondites", controllers.GetKondites)
+		api.POST("/kondites", controllers.CreateKondite)
+		api.PUT("/kondites/:id", controllers.UpdateKondite)
+		api.DELETE("/kondites/:id", controllers.DeleteKondite)
 
 		// Bonus
 		api.POST("/bonus/calculate", controllers.CalculateBonus)
