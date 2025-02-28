@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"net/http"
 	"bonus/models"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"

@@ -13,6 +13,7 @@ type Kondite struct {
 	StartDate   time.Time `json:"start_date"`
 	EndDate     time.Time `json:"end_date"`
 	Description string    `json:"description"`
+	MinPoint    int64     `json:"min_point"`
 
 	// Relasi ke Employee
 	Employee Employee `json:"employee" gorm:"foreignKey:EmployeeID"`

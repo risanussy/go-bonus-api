@@ -18,6 +18,8 @@ type AHPRequest struct {
 // GetBonus - GET /api/bonus
 // Mengambil data bonus setiap pegawai (dihitung langsung).
 func GetBonus(c *gin.Context) {
+	// Pastikan variabel db adalah milik package config atau global (misalnya config.DB).
+	// Di sini diasumsikan ada variabel global db = config.DB
 	var employees []models.Employee
 	if err := db.Find(&employees).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data pegawai"})

@@ -54,6 +54,13 @@ func main() {
 
 	api := router.Group("/api")
 	{
+		// Bonus
+		api.POST("/bonus/calculate", controllers.CalculateBonus)
+		api.GET("/bonus", controllers.GetBonus)
+
+		// Kalibrasi
+		api.GET("/kalibrasi", controllers.GetKalibrasi)
+
 		// Login (auth)
 		api.POST("/login", controllers.Login)
 
@@ -82,10 +89,6 @@ func main() {
 		api.POST("/kondites", controllers.CreateKondite)
 		api.PUT("/kondites/:id", controllers.UpdateKondite)
 		api.DELETE("/kondites/:id", controllers.DeleteKondite)
-
-		// Bonus
-		api.POST("/bonus/calculate", controllers.CalculateBonus)
-		api.GET("/bonus", controllers.GetBonus)
 	}
 
 	// Jalankan server di port 8080
