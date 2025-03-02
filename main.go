@@ -77,7 +77,8 @@ func main() {
 		api.DELETE("/kpi-categories/:id", controllers.DeleteKpiCategory)
 
 		// Penilaian KPI
-		api.GET("/kpi_evaluations", controllers.GetKPIAchievementList)
+		api.GET("/kpi_achievement_list", controllers.GetKPIAchievementList)
+		api.GET("/kpi_evaluations", controllers.GetAllKPIEvaluations)
 		api.POST("/kpi_evaluations", controllers.CreateKPIEvaluation)
 
 		// Employee

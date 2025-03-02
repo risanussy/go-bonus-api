@@ -73,3 +73,14 @@ func parseAchievementToPoint(ach string) float64 {
 		return 0
 	}
 }
+
+// GetAllKPIEvaluations - GET /api/kpi_evaluations
+// Mengambil semua data penilaian KPI
+func GetAllKPIEvaluations(c *gin.Context) {
+	var evaluations []models.KPIEvaluation
+	if err := db.Find(&evaluations).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data penilaian KPI"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": evaluations})
+}
