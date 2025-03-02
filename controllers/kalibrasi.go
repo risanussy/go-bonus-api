@@ -27,37 +27,13 @@ type KalibrasiResponse struct {
 }
 
 // GetKalibrasi - GET /api/kalibrasi
-// Menampilkan hasil kalibrasi KPI setiap karyawan.
-// - Admin melihat semua karyawan.
-// - User biasa hanya melihat miliknya sendiri.
+// Menampilkan hasil kalibrasi KPI setiap karyawan TANPA otentikasi/role.
 func GetKalibrasi(c *gin.Context) {
-	// Ambil role & employee_id dari middleware JWT
-	roleVal, roleExists := c.Get("role")
-	empVal, empExists := c.Get("employee_id")
-	if !roleExists || !empExists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-
-	role := roleVal.(string)
-	currentUserID := empVal.(uint)
-
-	// Ambil data employees
+	// Ambil semua employees (tanpa cek role)
 	var employees []models.Employee
-	if role == "admin" {
-		// Admin => semua karyawan
-		if err := db.Find(&employees).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data pegawai"})
-			return
-		}
-	} else {
-		// User => hanya data karyawan untuk dirinya sendiri
-		var emp models.Employee
-		if err := db.First(&emp, currentUserID).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Pegawai tidak ditemukan"})
-			return
-		}
-		employees = []models.Employee{emp}
+	if err := db.Find(&employees).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data pegawai"})
+		return
 	}
 
 	results := []KalibrasiResponse{}
@@ -72,7 +48,7 @@ func GetKalibrasi(c *gin.Context) {
 			continue
 		}
 
-		// Kita pisahkan total KPI berdasarkan kategori
+		// Pisahkan total KPI berdasarkan kategori
 		var totalPerusahaan float64
 		var totalDept float64
 		var totalInd float64
@@ -80,7 +56,6 @@ func GetKalibrasi(c *gin.Context) {
 		// Loop setiap KPI, hitung finalScore = Score * (Weight / 100)
 		for _, k := range kpis {
 			finalScore := k.Score * (k.Weight / 100.0)
-
 			switch k.Category {
 			case "Perusahaan":
 				totalPerusahaan += finalScore
@@ -134,7 +109,7 @@ func GetKalibrasi(c *gin.Context) {
 		nomor++
 	}
 
-	// Return JSON
+	// Return JSON tanpa unauthorized
 	c.JSON(http.StatusOK, gin.H{"data": results})
 }
 
@@ -166,16 +141,18 @@ func HitungPenambahPoin(empID uint) (float64, error) {
 // < 5 => "Outstanding" => multiplier=4
 // >= 5 => "Exceptional" => multiplier=5
 func SkalaKPI(final float64) (string, float64) {
-	if final < 2 {
+	switch {
+	case final < 2:
 		return "Poor", 1
-	} else if final < 3 {
+	case final < 3:
 		return "Fair", 2
-	} else if final < 4 {
+	case final < 4:
 		return "Good", 3
-	} else if final < 5 {
+	case final < 5:
 		return "Outstanding", 4
+	default:
+		return "Exceptional", 5
 	}
-	return "Exceptional", 5
 }
 
 // RoundFloat => membulatkan float ke n desimal
