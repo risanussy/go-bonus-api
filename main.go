@@ -29,7 +29,7 @@ func main() {
 	}))
 
 	// Koneksi ke DB MySQL
-	dsn := "root@tcp(127.0.0.1:3306)/bonus_db?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root@tcp(127.0.0.1:3306)/order_bonus_api?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Gagal koneksi ke database: ", err)
@@ -77,6 +77,7 @@ func main() {
 		api.DELETE("/kpi-categories/:id", controllers.DeleteKpiCategory)
 
 		// Penilaian KPI
+		api.GET("/kpi_evaluations", controllers.GetKPIAchievementList)
 		api.POST("/kpi_evaluations", controllers.CreateKPIEvaluation)
 
 		// Employee

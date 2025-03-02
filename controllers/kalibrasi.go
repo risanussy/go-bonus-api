@@ -27,70 +27,95 @@ type KalibrasiResponse struct {
 }
 
 // GetKalibrasi - GET /api/kalibrasi
-// Menghitung nilai KPI (Perusahaan, Dept, Individu), pengurang poin, bonus, dll.
+// Menampilkan hasil kalibrasi KPI setiap karyawan.
+// - Admin melihat semua karyawan.
+// - User biasa hanya melihat miliknya sendiri.
 func GetKalibrasi(c *gin.Context) {
-	// 1. Ambil semua pegawai
-	var employees []models.Employee
-	if err := db.Find(&employees).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data pegawai"})
+	// Ambil role & employee_id dari middleware JWT
+	roleVal, roleExists := c.Get("role")
+	empVal, empExists := c.Get("employee_id")
+	if !roleExists || !empExists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
+	}
+
+	role := roleVal.(string)
+	currentUserID := empVal.(uint)
+
+	// Ambil data employees
+	var employees []models.Employee
+	if role == "admin" {
+		// Admin => semua karyawan
+		if err := db.Find(&employees).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data pegawai"})
+			return
+		}
+	} else {
+		// User => hanya data karyawan untuk dirinya sendiri
+		var emp models.Employee
+		if err := db.First(&emp, currentUserID).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Pegawai tidak ditemukan"})
+			return
+		}
+		employees = []models.Employee{emp}
 	}
 
 	results := []KalibrasiResponse{}
 	nomor := 1
 
-	// 2. Loop setiap pegawai => hitung KPI & bonus
+	// Loop setiap pegawai => hitung KPI & bonus
 	for _, emp := range employees {
-		// 2a. Ambil KPI milik pegawai ini
-		// Pastikan di struct `KPI` ada field `Category` atau cara lain
-		// untuk memisahkan "Perusahaan", "Dept", "Individu"
+		// Ambil KPI milik pegawai ini
 		var kpis []models.KPI
 		err := db.Where("employee_id = ?", emp.ID).Find(&kpis).Error
 		if err != nil && err != gorm.ErrRecordNotFound {
 			continue
 		}
 
-		// 2b. Bagi KPI berdasarkan category/description
+		// Kita pisahkan total KPI berdasarkan kategori
 		var totalPerusahaan float64
 		var totalDept float64
 		var totalInd float64
 
+		// Loop setiap KPI, hitung finalScore = Score * (Weight / 100)
 		for _, k := range kpis {
-			// Misal k.Description: "Perusahaan", "Dept", "Individu"
-			switch k.Description {
+			finalScore := k.Score * (k.Weight / 100.0)
+
+			switch k.Category {
 			case "Perusahaan":
-				totalPerusahaan += k.Score
+				totalPerusahaan += finalScore
 			case "Dept", "Departemen":
-				totalDept += k.Score
+				totalDept += finalScore
 			case "Individu":
-				totalInd += k.Score
+				totalInd += finalScore
 			}
 		}
 
-		// 2c. Total KPI (sebelum kalibrasi)
+		// Total KPI sebelum kalibrasi
 		totalKPI := totalPerusahaan + totalDept + totalInd
 
-		// 2d. Hitung pengurang poin => dari Kondite
+		// Pengurang poin => dari Kondite
 		pengurang, _ := HitungPengurangPoin(emp.ID)
 
-		// 2e. Hitung penambah poin (opsional, misal reward)
+		// Penambah poin => jika ada reward dsb. (default 0)
 		penambah, _ := HitungPenambahPoin(emp.ID)
 
-		// 2f. Final KPI
+		// Final KPI setelah kalibrasi
 		finalKPI := totalKPI - pengurang + penambah
 		if finalKPI < 0 {
 			finalKPI = 0
 		}
 
-		// 2g. Skala (Poor, Fair, Good, Outstanding, Exceptional)
+		// Skala & multiplier bonus
 		skala, multiplier := SkalaKPI(finalKPI)
 
-		// 2h. Gaji
+		// Gaji
 		gaji := float64(emp.Salary)
 
-		// 2i. Bonus = gaji * multiplier
+		// Bonus
 		bonus := gaji * multiplier
 
+		// Buat item response
 		item := KalibrasiResponse{
 			No:                  nomor,
 			Name:                emp.Name,
@@ -109,7 +134,7 @@ func GetKalibrasi(c *gin.Context) {
 		nomor++
 	}
 
-	// 3. Return JSON
+	// Return JSON
 	c.JSON(http.StatusOK, gin.H{"data": results})
 }
 
@@ -122,20 +147,19 @@ func HitungPengurangPoin(empID uint) (float64, error) {
 	}
 	var total float64
 	for _, k := range kondites {
-		total += float64(k.MinPoint) // Asumsi MinPoint = int64
+		// Asumsi MinPoint adalah float64 atau int => sesuaikan
+		total += float64(k.MinPoint)
 	}
 	return total, nil
 }
 
 // HitungPenambahPoin => contoh, jika ada reward dsb.
 func HitungPenambahPoin(empID uint) (float64, error) {
-	// Di sini diisi logika penambah poin, misalnya "BOD Award" = 0.5
-	// Contoh default: 0
+	// Default 0, diisi jika ada logika penambahan
 	return 0, nil
 }
 
-// SkalaKPI => mengembalikan keterangan & multiplier
-// Contoh rumus:
+// SkalaKPI => mengembalikan keterangan & multiplier bonus
 // < 2 => "Poor" => multiplier=1
 // < 3 => "Fair" => multiplier=2
 // < 4 => "Good" => multiplier=3

@@ -54,5 +54,10 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": tokenString})
+	// Kembalikan token beserta name
+	c.JSON(http.StatusOK, gin.H{
+		"token": tokenString,
+		"name":  employee.Name,
+		"role":  employee.Role,
+	})
 }

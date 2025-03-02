@@ -30,7 +30,7 @@ func CreateKondite(c *gin.Context) {
 		StartDate   string `json:"start_date" binding:"required"` // Format "YYYY-MM-DD"
 		EndDate     string `json:"end_date" binding:"required"`   // Format "YYYY-MM-DD"
 		Description string `json:"description"`
-		MinPoint    int64  `json:"min_point"`
+		MinPoint    float64  `json:"min_point"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
